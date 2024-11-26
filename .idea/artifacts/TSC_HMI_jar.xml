@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="TSC_HMI:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/TSC_HMI_jar</output-path>
+    <root id="archive" name="TSC_HMI.jar">
+      <element id="module-output" name="TSC_HMI" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-codec/commons-codec/1.9/commons-codec-1.9.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/si/trina/moka7-live/0.0.11/moka7-live-0.0.11.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
