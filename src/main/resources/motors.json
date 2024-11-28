@@ -1,0 +1,20 @@
+{
+  "motors": [
+    {
+      "name": "Motor1",
+      "database": "Database1"
+    },
+    {
+      "name": "Motor2",
+      "database": "Database2"
+    },
+    {
+      "name": "Motor3",
+      "database": "Database3"
+    },
+    {
+      "name": "Motor4",
+      "database": "Database4"
+    }
+  ]
+}

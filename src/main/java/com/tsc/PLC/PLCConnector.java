@@ -1,40 +1,34 @@
+// src/main/java/com/tsc/PLC/PLCConnector.java
 package com.tsc.PLC;
 
-import com.sourceforge.snap7.moka7.*;
-
-import java.io.IOException;
+import com.sourceforge.snap7.moka7.S7Client;
+import com.tsc.conf.PLCConfig;
 
 public class PLCConnector {
     private S7Client plc;
-    private String address;
-    private int rack;
-    private int slot;
+    private PLCConfig config;
     private boolean isConnected;
 
-    public PLCConnector() {
+    public PLCConnector(PLCConfig config) {
         this.plc = new S7Client();
+        this.config = config;
         this.isConnected = false;
-        this.address = "192.168.0.1";
-        this.rack = 0;
-        this.slot = 1;
-
     }
 
-
     public void setAddress(String address) {
-        this.address = address;
+        this.config.setAddress(address);
     }
 
     public void setRack(int rack) {
-        this.rack = rack;
+        this.config.setRack(rack);
     }
 
     public void setSlot(int slot) {
-        this.slot = slot;
+        this.config.setSlot(slot);
     }
 
     public int connect() {
-        int result = plc.ConnectTo(address, rack, slot);
+        int result = plc.ConnectTo(config.getAddress(), config.getRack(), config.getSlot());
         if (result == 0) {
             isConnected = true;
         }
@@ -55,6 +49,7 @@ public class PLCConnector {
     public String getErrorText(int errorCode) {
         return plc.ErrorText(errorCode);
     }
+
     public S7Client getPlc() {
         return plc;
     }

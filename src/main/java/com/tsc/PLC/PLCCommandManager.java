@@ -25,7 +25,7 @@ public class PLCCommandManager {
         plcConnector.disconnect();
     }
 
-    public String readDataBlock(int dbNumber, int dbSize, int dbStart, int stringByte, int stringLength) throws IOException {
+    public String readStringFromDataBlock(int dbNumber, int dbSize, int dbStart, int stringByte, int stringLength) throws IOException {
         if (!plcConnector.isConnected()) {
             throw new IOException("PLC is not connected");
         }
@@ -39,7 +39,7 @@ public class PLCCommandManager {
         return new String(buffer, stringByte, stringLength, StandardCharsets.UTF_8);
     }
 
-    public void writeDataBlock(int dbNumber, int dbStart, String data) throws IOException {
+    public void writeStringToDataBlock(int dbNumber, int dbStart, String data) throws IOException {
         if (!plcConnector.isConnected()) {
             throw new IOException("PLC is not connected");
         }
@@ -55,4 +55,40 @@ public class PLCCommandManager {
             throw new IOException("Failed to write data block: " + plcConnector.getErrorText(result));
         }
     }
+    public void writeBooleanToDataBlock(int dbNumber, int dbStart, int bitIndex, boolean value) throws IOException {
+        if (!plcConnector.isConnected()) {
+            throw new IOException("PLC is not connected");
+        }
+
+        byte[] buffer = new byte[1];
+        int result = plcConnector.getPlc().ReadArea(S7.S7AreaDB, dbNumber, dbStart, 1, buffer);
+        if (result != 0) {
+            throw new IOException("Failed to read data block: " + plcConnector.getErrorText(result));
+        }
+
+        if (value) {
+            buffer[0] |= (1 << bitIndex);
+        } else {
+            buffer[0] &= ~(1 << bitIndex);
+        }
+
+        result = plcConnector.getPlc().WriteArea(S7.S7AreaDB, dbNumber, dbStart, 1, buffer);
+        if (result != 0) {
+            throw new IOException("Failed to write data block: " + plcConnector.getErrorText(result));
+        }
+    }
+    public boolean readBooleanFromDataBlock(int dbNumber, int dbStart, int bitIndex) throws IOException {
+        if (!plcConnector.isConnected()) {
+            throw new IOException("PLC is not connected");
+        }
+
+        byte[] buffer = new byte[1];
+        int result = plcConnector.getPlc().ReadArea(S7.S7AreaDB, dbNumber, dbStart, 1, buffer);
+        if (result != 0) {
+            throw new IOException("Failed to read data block: " + plcConnector.getErrorText(result));
+        }
+
+        return (buffer[0] & (1 << bitIndex)) != 0;
+    }
+
 }
