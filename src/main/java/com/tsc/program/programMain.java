@@ -2,10 +2,7 @@ package com.tsc.program;
 
 import com.tsc.PLC.PLCCommandManager;
 import com.tsc.PLC.PLCConnector;
-import com.tsc.conf.Motor;
-import com.tsc.conf.motorConfig;
-import com.tsc.conf.PLCConfig;
-import com.tsc.conf.PLCConfigManager;
+import com.tsc.conf.*;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
