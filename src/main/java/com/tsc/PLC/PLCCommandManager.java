@@ -24,6 +24,9 @@ public class PLCCommandManager {
     public void executeDisconnectCommand() throws IOException {
         plcConnector.disconnect();
     }
+    public boolean isConnected() {
+        return plcConnector.isConnected();
+    }
 
     public String readStringFromDataBlock(int dbNumber, int dbSize, int dbStart, int stringByte, int stringLength) throws IOException {
         if (!plcConnector.isConnected()) {
