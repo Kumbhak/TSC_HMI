@@ -19,7 +19,7 @@ public class programMain {
     private static List<Motor> motors;
     private static PLCCommandManager commandManager;
     private static JLabel statusBar;
-
+    private static int motorBlocksPerPage;
     public static void main() {
         try {
             motorConfig motorConfigInstance = motorConfig.loadConfig(Paths.get("config", "motorConfig.json").toString());
