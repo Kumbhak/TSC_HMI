@@ -33,6 +33,11 @@ public class programMain {
                 plcConnector.connect();
             }
 
+            //load hmi config
+            HMIConfig hmiconfig = HMIConfig.loadConfig(Paths.get("config", "HMIConfig.json").toString());
+            motorBlocksPerPage = hmiconfig.getMotorBlocksPerPage();
+
+
             createAndShowGUI();
         } catch (IOException e) {
             e.printStackTrace();
