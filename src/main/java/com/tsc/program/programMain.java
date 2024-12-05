@@ -81,11 +81,7 @@ public class programMain {
 
             // Timer to update motor panel every 500 milliseconds
             Timer timer = new Timer(500, e -> {
-                try {
-                    updateMotorPanel(motorPanel);
-                } catch (IOException ex) {
-                    showErrorDialog("Failed to update motor panel: " + ex.getMessage());
-                }
+                updateMotorPanel(motorPanel);
             });
             timer.start();
 
