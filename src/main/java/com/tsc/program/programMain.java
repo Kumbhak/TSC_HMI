@@ -160,6 +160,7 @@ public class programMain {
 
             JPanel motorSubPanel = new JPanel(new GridBagLayout());
             motorSubPanel.setBackground(new Color(45, 45, 45));
+            motorSubPanel.setBorder(new LineBorder(getMotorStateColor(motor), 2)); // Set border color based on motor state
             GridBagConstraints subGbc = new GridBagConstraints();
             subGbc.fill = GridBagConstraints.HORIZONTAL;
             subGbc.insets = new Insets(10, 10, 10, 10);
