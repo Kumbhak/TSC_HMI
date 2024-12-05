@@ -248,7 +248,7 @@ public class programMain {
             // Vertical progress bar
             JProgressBar progressBar = new JProgressBar(JProgressBar.VERTICAL, 0, 100);
             progressBar.setValue(getMotorPosition(motor));
-            progressBar.setForeground(new Color(0,113,206));
+            progressBar.setForeground(new Color(0, 113, 206));
             subGbc.gridy = 0;
             subGbc.gridx = 1;
             subGbc.gridheight = 5;
