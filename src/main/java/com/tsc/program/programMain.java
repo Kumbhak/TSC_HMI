@@ -64,11 +64,7 @@ public class programMain {
             prevButton.addActionListener(e -> {
                 if (currentPage > 0) {
                     currentPage--;
-                    try {
-                        updateMotorPanel(motorPanel);
-                    } catch (IOException ex) {
-                        showErrorDialog("Failed to update motor panel: " + ex.getMessage());
-                    }
+                    updateMotorPanel(motorPanel);
                 }
             });
 
