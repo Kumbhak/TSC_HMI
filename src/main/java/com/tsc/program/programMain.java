@@ -71,11 +71,7 @@ public class programMain {
             nextButton.addActionListener(e -> {
                 if ((currentPage + 1) * 2 < motors.size()) {
                     currentPage++;
-                    try {
-                        updateMotorPanel(motorPanel);
-                    } catch (IOException ex) {
-                        showErrorDialog("Failed to update motor panel: " + ex.getMessage());
-                    }
+                    updateMotorPanel(motorPanel);
                 }
             });
 
