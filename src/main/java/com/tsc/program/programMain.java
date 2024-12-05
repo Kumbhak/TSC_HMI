@@ -136,8 +136,8 @@ public class programMain {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(10, 10, 10, 10);
 
-        int start = currentPage * 2;
-        int end = Math.min(start + 2, motors.size());
+        int start = currentPage * motorBlocksPerPage;
+        int end = Math.min(start + motorBlocksPerPage, motors.size());
 
         for (int i = start; i < end; i++) {
             Motor motor = motors.get(i);
