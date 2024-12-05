@@ -77,11 +77,7 @@ public class programMain {
 
             faultsButton.addActionListener(e -> showFaultsDialog());
 
-            try {
-                updateMotorPanel(motorPanel);
-            } catch (IOException e) {
-                showErrorDialog("Failed to update motor panel: " + e.getMessage());
-            }
+            updateMotorPanel(motorPanel);
 
             // Timer to update motor panel every 500 milliseconds
             Timer timer = new Timer(500, e -> {
