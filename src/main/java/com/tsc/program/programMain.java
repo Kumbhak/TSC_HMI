@@ -7,6 +7,7 @@ import com.tsc.conf.*;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
@@ -30,8 +31,13 @@ public class programMain {
                 plcConnector.connect();
             }
 
-            //load hmi config
-            HMIConfig hmiconfig = HMIConfig.loadConfig(Paths.get("config", "HMIConfig.json").toString());
+            //load hmi config else make it
+            String hmiConfigPath = Paths.get("config", "HMIConfig.json").toString();
+            File hmiConfigFile = new File(hmiConfigPath);
+            if (!hmiConfigFile.exists()) {
+                HMIConfig.generateDefaultConfig(Paths.get("config", "HMIConfig.json").toString());
+            }
+            HMIConfig hmiconfig = HMIConfig.loadConfig(hmiConfigPath);
             motorBlocksPerPage = hmiconfig.getMotorBlocksPerPage();
 
 
@@ -46,8 +52,8 @@ public class programMain {
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("PLC Interface");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setUndecorated(true); // Remove window borders and title bar
-            frame.setExtendedState(JFrame.MAXIMIZED_BOTH); // Maximize the window to cover the entire screen
+            frame.setUndecorated(true);
+            frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
             frame.setLayout(new BorderLayout());
 
             JPanel motorPanel = new JPanel(new GridBagLayout());
@@ -66,24 +72,40 @@ public class programMain {
             prevButton.addActionListener(e -> {
                 if (currentPage > 0) {
                     currentPage--;
-                    updateMotorPanel(motorPanel);
+                    try {
+                        updateMotorPanel(motorPanel);
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
                 }
             });
 
             nextButton.addActionListener(e -> {
                 if ((currentPage + 1) * 2 < motors.size()) {
                     currentPage++;
-                    updateMotorPanel(motorPanel);
+                    try {
+                        updateMotorPanel(motorPanel);
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
                 }
             });
 
             faultsButton.addActionListener(e -> showFaultsDialog());
 
-            updateMotorPanel(motorPanel);
+            try {
+                updateMotorPanel(motorPanel);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
 
             // Timer to update motor panel every 500 milliseconds
             Timer timer = new Timer(500, e -> {
-                updateMotorPanel(motorPanel);
+                try {
+                    updateMotorPanel(motorPanel);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             });
             timer.start();
 
@@ -100,11 +122,9 @@ public class programMain {
         JButton resetButton = new JButton("Reset Faults");
         resetButton.addActionListener(e -> {
             try {
-                commandManager.executeDisconnectCommand();
-                commandManager.executeConnectCommand("PLC_ADDRESS", 0, 1); // Replace with actual PLC address, rack, and slot
                 faultsTextArea.setText(getCurrentFaults());
-            } catch (IOException ex) {
-                showErrorDialog("Failed to reset PLC connection: " + ex.getMessage());
+            } catch (Exception ex) {
+                showErrorDialog("Failed to reset faults: " + ex.getMessage());
             }
         });
 
@@ -146,7 +166,11 @@ public class programMain {
 
             JPanel motorSubPanel = new JPanel(new GridBagLayout());
             motorSubPanel.setBackground(new Color(45, 45, 45));
-            motorSubPanel.setBorder(new LineBorder(getMotorStateColor(motor), 2)); // Set border color based on motor state
+            try {
+                motorSubPanel.setBorder(new LineBorder(getMotorStateColor(motor), 5));
+            } catch (IOException e) {
+                motorSubPanel.setBorder(new LineBorder(Color.RED, 2)); // Set border color to red if an exception occurs
+            }
             GridBagConstraints subGbc = new GridBagConstraints();
             subGbc.fill = GridBagConstraints.HORIZONTAL;
             subGbc.insets = new Insets(10, 10, 10, 10);
@@ -164,15 +188,12 @@ public class programMain {
             JLabel positionTitleLabel = new JLabel("Position");
             positionTitleLabel.setForeground(new Color(200, 200, 200));
             positionTitleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            JLabel positionValueLabel = new JLabel(String.valueOf(motor.getDatablock()));
+            JLabel positionValueLabel = new JLabel(String.valueOf(commandManager.readIntFromDataBlock(motor.getDatablock(), 256) + " Ft "
+            + commandManager.readIntFromDataBlock(motor.getDatablock(), 258) + " In"));
             positionValueLabel.setForeground(new Color(200, 200, 200));
             positionValueLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            JLabel positionUnitLabel = new JLabel("feet");
-            positionUnitLabel.setForeground(new Color(200, 200, 200));
-            positionUnitLabel.setHorizontalAlignment(SwingConstants.CENTER);
             positionPanel.add(positionTitleLabel, BorderLayout.NORTH);
             positionPanel.add(positionValueLabel, BorderLayout.CENTER);
-            positionPanel.add(positionUnitLabel, BorderLayout.SOUTH);
             subGbc.gridy = 1;
             motorSubPanel.add(positionPanel, subGbc);
 
@@ -190,7 +211,7 @@ public class programMain {
                     upButton.setText("Stop");
                     System.out.println("Up button clicked for motor: " + motor.getDatablock());
                     try {
-                        commandManager.writeBooleanToDataBlock(motor.getDatablock(), 0, 0, true);
+                        commandManager.writeBooleanToDataBlock(motor.getDatablock(), 266, 0, true);
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }
@@ -233,9 +254,11 @@ public class programMain {
             motorSubPanel.add(downButton, subGbc);
 
             // Vertical progress bar
-            JProgressBar progressBar = new JProgressBar(JProgressBar.VERTICAL, 0, 100);
-            progressBar.setValue(getMotorPosition(motor));
-            progressBar.setForeground(new Color(0, 113, 206));
+            JProgressBar progressBar = new JProgressBar(JProgressBar.VERTICAL,
+                    commandManager.readIntFromDataBlock(motor.getDatablock(), 264),
+                    commandManager.readIntFromDataBlock(motor.getDatablock(), 262));
+            progressBar.setValue(commandManager.readIntFromDataBlock(motor.getDatablock(), 260));
+            progressBar.setForeground(new Color(100, 100, 255));
             subGbc.gridy = 0;
             subGbc.gridx = 1;
             subGbc.gridheight = 5;
@@ -254,19 +277,19 @@ public class programMain {
     }
     private static Color getMotorStateColor(Motor motor) throws IOException {
         //selected
-        if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), 0, 0)) {
+        if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), 268, 0)) {
             return Color.YELLOW;
-            //up limit
         }
         else if(!commandManager.isConnected()) {
             return Color.RED;
         }
-        else if(commandManager.readBooleanFromDataBlock(motor.getDatablock(), 0, 1)) {
+        //up limit
+        else if(commandManager.readBooleanFromDataBlock(motor.getDatablock(), 268, 3)) {
             return Color.BLUE;
-            //down limit
-        } else if(commandManager.readBooleanFromDataBlock(motor.getDatablock(), 0, 2)) {
+        //down limit
+        } else if(commandManager.readBooleanFromDataBlock(motor.getDatablock(), 268, 4)) {
             return Color.GREEN;
-            //faulted
+        //faulted
         } else if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), 0, 3)) {
             return Color.RED;
             //otherwise gray

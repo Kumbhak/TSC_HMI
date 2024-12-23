@@ -30,4 +30,6 @@ public class Motor {
     public void setDatablock(int datablock) {
         this.datablock = datablock;
     }
+
+
 }

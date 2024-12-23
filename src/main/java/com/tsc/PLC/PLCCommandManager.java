@@ -123,7 +123,7 @@ public class PLCCommandManager {
         }
     }
 
-    // Method to read a real (float) value from a data block
+    // Method to read a real value from a data block
     public float readRealFromDataBlock(int dbNumber, int dbStart) throws IOException {
         if (!plcConnector.isConnected()) {
             throw new IOException("PLC is not connected");
@@ -138,7 +138,7 @@ public class PLCCommandManager {
         return S7.GetFloatAt(buffer, 0);
     }
 
-    // Method to write a real (float) value to a data block
+    // Method to write a real value to a data block
     public void writeRealToDataBlock(int dbNumber, int dbStart, float value) throws IOException {
         if (!plcConnector.isConnected()) {
             throw new IOException("PLC is not connected");

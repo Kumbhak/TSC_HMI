@@ -35,8 +35,7 @@ public class motorConfig {
     private static motorConfig generateDefaultConfig(String filePath) throws IOException {
         motorConfig defaultConfig = new motorConfig();
         defaultConfig.motors = Arrays.asList(
-                new Motor("Motor1", 1),
-                new Motor("Motor2", 2)
+                new Motor("Motor1", 1)
         );
 
         ObjectMapper mapper = new ObjectMapper();
