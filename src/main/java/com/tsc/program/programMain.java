@@ -280,6 +280,7 @@ public class programMain {
         if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), 268, 0)) {
             return Color.YELLOW;
         }
+        //faulted is not connected
         else if(!commandManager.isConnected()) {
             return Color.RED;
         }
