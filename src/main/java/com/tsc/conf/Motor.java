@@ -12,6 +12,25 @@ public class Motor {
     public Motor(String name, int datablock) {
         this.name = name;
         this.datablock = datablock;
+        this.nameoffset = nameoffset;
+        this.nameoffsetlength = nameoffsetlength;
+        this.upoffset = upoffset;
+        this.upoffsetSub = upoffsetSub;
+        this.downoffset = downoffset;
+        this.downoffsetSub = downoffsetSub;
+        this.p2offset = p2offset;
+        this.p2offsetSub = p2offsetSub;
+        this.p3offset = p3offset;
+        this.p3offsetSub = p3offsetSub;
+        this.uplimitoffset = uplimitoffset;
+        this.uplimitoffsetsub = uplimitoffsetsub;
+        this.downlimitoffset = downlimitoffset;
+        this.downlimitoffsetsub = downlimitoffsetsub;
+        this.motor1selectoffset = motor1selectoffset;
+        this.motor1selectoffsetsub = motor1selectoffsetsub;
+        this.motor2selectoffset = motor2selectoffset;
+        this.motor2selectoffsetsub = motor2selectoffsetsub;
+
     }
 
     // Getters and setters
