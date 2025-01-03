@@ -227,15 +227,12 @@ public class programMain {
             });
 
             downButton.addActionListener(e -> {
-                if (downButton.isSelected()) {
-                    upButton.setSelected(false);
-                    downButton.setBackground(Color.RED);
-                    downButton.setText("Stop");
-                    System.out.println("Down button clicked for motor: " + motor.getDatablock());
-                    try {
-                        commandManager.writeBooleanToDataBlock(motor.getDatablock(), 0, 1, true);
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
+                try {
+                    if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), 0, 1)) {
+                        downButton.setText("Stop");
+                        downButton.setBackground(Color.RED);
+                        System.out.println("Down button pressed for : " + motor.getName());
+                        downButton.setSelected(true);
                     }
                 } else {
                     downButton.setBackground(Color.GREEN);
