@@ -11,6 +11,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class programMain {
     private static int currentPage = 0;
@@ -18,6 +21,8 @@ public class programMain {
     private static PLCCommandManager commandManager;
     private static JLabel statusBar;
     private static int motorBlocksPerPage;
+    private static JFrame frame; // Declare frame as a static field
+
     public static void main() {
         try {
             motorConfig motorConfigInstance = motorConfig.loadConfig(Paths.get("config", "motorConfig.json").toString());
@@ -31,26 +36,36 @@ public class programMain {
                 plcConnector.connect();
             }
 
-            //load hmi config else make it
+            // Load HMI config or create it
             String hmiConfigPath = Paths.get("config", "HMIConfig.json").toString();
             File hmiConfigFile = new File(hmiConfigPath);
             if (!hmiConfigFile.exists()) {
-                HMIConfig.generateDefaultConfig(Paths.get("config", "HMIConfig.json").toString());
+                HMIConfig.generateDefaultConfig(hmiConfigPath);
             }
-            HMIConfig hmiconfig = HMIConfig.loadConfig(hmiConfigPath);
-            motorBlocksPerPage = hmiconfig.getMotorBlocksPerPage();
-
+            HMIConfig hmiConfig = HMIConfig.loadConfig(hmiConfigPath);
+            motorBlocksPerPage = hmiConfig.getMotorBlocksPerPage();
 
             createAndShowGUI();
+
+            // Start a ScheduledExecutorService to update the GUI every 100 milliseconds
+            ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+            executorService.scheduleAtFixedRate(() -> {
+                SwingUtilities.invokeLater(() -> {
+                    try {
+                        updateMotorPanel((JPanel) frame.getContentPane().getComponent(0));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+            }, 0, 100, TimeUnit.MILLISECONDS);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-
     private static void createAndShowGUI() {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("PLC Interface");
+            frame = new JFrame("PLC Interface"); // Initialize frame
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setUndecorated(true);
             frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -91,7 +106,13 @@ public class programMain {
                 }
             });
 
-            faultsButton.addActionListener(e -> showFaultsDialog());
+            faultsButton.addActionListener(e -> {
+                try {
+                    showFaultsDialog();
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            });
 
             try {
                 updateMotorPanel(motorPanel);
@@ -99,21 +120,11 @@ public class programMain {
                 throw new RuntimeException(e);
             }
 
-            // Timer to update motor panel every 500 milliseconds
-            Timer timer = new Timer(500, e -> {
-                try {
-                    updateMotorPanel(motorPanel);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            });
-            timer.start();
-
             frame.setVisible(true);
         });
     }
 
-    private static void showFaultsDialog() {
+    private static void showFaultsDialog() throws IOException {
         JPanel faultsPanel = new JPanel(new BorderLayout());
         JTextArea faultsTextArea = new JTextArea(10, 30);
         faultsTextArea.setEditable(false);
@@ -134,15 +145,19 @@ public class programMain {
         JOptionPane.showMessageDialog(null, faultsPanel, "Current Faults", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private static String getCurrentFaults() {
+    private static String getCurrentFaults() throws IOException {
         StringBuilder faults = new StringBuilder();
         for (Motor motor : motors) {
             try {
-                if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), 0, 3)) {
-                    faults.append("Motor ").append(motor.getName()).append(" has a fault.\n");
+                if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), motor.getFaultoffset(), motor.getFaultoffsetsub())) {
+                    faults.append("Motor ").append(
+                            commandManager.readStringFromDataBlock(motor.getDatablock(), 67, motor.getNameoffset(), motor.getNameoffset(), motor.getNameoffsetlength())
+                    ).append(" has a fault.\n");
                 }
             } catch (IOException e) {
-                faults.append("Error reading motor ").append(motor.getName()).append(": ").append(e.getMessage()).append("\n");
+                faults.append("Error reading motor ").append(
+                        commandManager.readStringFromDataBlock(motor.getDatablock(), 67, motor.getNameoffset(), motor.getNameoffset(), motor.getNameoffsetlength())
+                ).append(": ").append(e.getMessage()).append("\n");
             }
         }
         return faults.toString();
@@ -176,7 +191,8 @@ public class programMain {
             subGbc.insets = new Insets(10, 10, 10, 10);
 
             // Motor name label
-            JLabel nameLabel = new JLabel("Motor: " + motor.getName());
+            JLabel nameLabel = new JLabel("Motor: " +
+                    commandManager.readStringFromDataBlock(motor.getDatablock(), 67, motor.getNameoffset(), motor.getNameoffset(), motor.getNameoffsetlength()));
             nameLabel.setForeground(new Color(200, 200, 200));
             subGbc.gridx = 0;
             subGbc.gridy = 0;
@@ -188,8 +204,8 @@ public class programMain {
             JLabel positionTitleLabel = new JLabel("Position");
             positionTitleLabel.setForeground(new Color(200, 200, 200));
             positionTitleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            JLabel positionValueLabel = new JLabel(String.valueOf(commandManager.readIntFromDataBlock(motor.getDatablock(), 256) + " Ft "
-            + commandManager.readIntFromDataBlock(motor.getDatablock(), 258) + " In"));
+            JLabel positionValueLabel = new JLabel(String.valueOf(commandManager.readIntFromDataBlock(motor.getDatablock(), motor.getFtoffset()) + " Ft "
+                    + commandManager.readIntFromDataBlock(motor.getDatablock(), motor.getInoffset()) + " In"));
             positionValueLabel.setForeground(new Color(200, 200, 200));
             positionValueLabel.setHorizontalAlignment(SwingConstants.CENTER);
             positionPanel.add(positionTitleLabel, BorderLayout.NORTH);
@@ -205,43 +221,38 @@ public class programMain {
             downButton.setBackground(Color.GREEN);
 
             upButton.addActionListener(e -> {
-                if (upButton.isSelected()) {
-                    downButton.setSelected(false);
-                    upButton.setBackground(Color.RED);
-                    upButton.setText("Stop");
-                    System.out.println("Up button clicked for motor: " + motor.getDatablock());
-                    try {
-                        commandManager.writeBooleanToDataBlock(motor.getDatablock(), 266, 0, true);
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
+                try {
+                    if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), motor.getUpoffset(), motor.getUpoffsetSub())) {
+                        upButton.setSelected(true);
+                        upButton.setBackground(Color.RED);
+                        upButton.setText("Stop");
+                        System.out.println("Up button pressed for : " + commandManager.readStringFromDataBlock(
+                                motor.getDatablock(), 67, motor.getNameoffset(), motor.getNameoffset(), motor.getNameoffsetlength()
+                        ));
+                    } else {
+                        upButton.setText("Up");
+                        upButton.setBackground(Color.BLUE);
                     }
-                } else {
-                    upButton.setBackground(Color.BLUE);
-                    upButton.setText("Up");
-                    try {
-                        commandManager.writeBooleanToDataBlock(motor.getDatablock(), 0, 0, false);
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
+                } catch (IOException ex) {
+                    ex.printStackTrace();
                 }
+
             });
 
             downButton.addActionListener(e -> {
                 try {
-                    if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), 0, 1)) {
+                    if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), motor.getDownoffset(), motor.getDownoffsetSub())) {
                         downButton.setText("Stop");
                         downButton.setBackground(Color.RED);
-                        System.out.println("Down button pressed for : " + motor.getName());
+                        System.out.println("Down button pressed for : " + commandManager.readStringFromDataBlock(
+                                motor.getDatablock(), 67, motor.getNameoffset(), motor.getNameoffset(), motor.getNameoffsetlength()));
                         downButton.setSelected(true);
+                    } else {
+                        downButton.setText("Down");
+                        downButton.setBackground(Color.GREEN);
                     }
-                } else {
-                    downButton.setBackground(Color.GREEN);
-                    downButton.setText("Down");
-                    try {
-                        commandManager.writeBooleanToDataBlock(motor.getDatablock(), 0, 1, false);
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
+                } catch (IOException ex) {
+                    ex.printStackTrace();
                 }
             });
 
@@ -252,9 +263,9 @@ public class programMain {
 
             // Vertical progress bar
             JProgressBar progressBar = new JProgressBar(JProgressBar.VERTICAL,
-                    commandManager.readIntFromDataBlock(motor.getDatablock(), 264),
-                    commandManager.readIntFromDataBlock(motor.getDatablock(), 262));
-            progressBar.setValue(commandManager.readIntFromDataBlock(motor.getDatablock(), 260));
+                    commandManager.readIntFromDataBlock(motor.getDatablock(), motor.getCountsdownoffset()),
+                    commandManager.readIntFromDataBlock(motor.getDatablock(), motor.getCountsupoffset()));
+            progressBar.setValue(commandManager.readIntFromDataBlock(motor.getDatablock(), motor.getCountsoffset()));
             progressBar.setForeground(new Color(100, 100, 255));
             subGbc.gridy = 0;
             subGbc.gridx = 1;
@@ -268,29 +279,30 @@ public class programMain {
         motorPanel.repaint();
     }
 
-    private static int getMotorPosition(Motor motor) {
-        // Placeholder logic for motor position
-        return motor.getDatablock() * 10;
-    }
     private static Color getMotorStateColor(Motor motor) throws IOException {
-        //selected
-        if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), 268, 0)) {
+        // Selected
+        if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), motor.getMotorselectedoffset(), motor.getMotorselectedoffsetsub())) {
             return Color.YELLOW;
         }
-        //faulted is not connected
-        else if(!commandManager.isConnected()) {
+        // Faulted is not connected
+        else if (!commandManager.isConnected()) {
             return Color.RED;
         }
-        //up limit
-        else if(commandManager.readBooleanFromDataBlock(motor.getDatablock(), 268, 3)) {
+        // Up limit
+        else if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), motor.getUplimitoffset(), motor.getUplimitoffsetsub())) {
             return Color.BLUE;
-        //down limit
-        } else if(commandManager.readBooleanFromDataBlock(motor.getDatablock(), 268, 4)) {
+        }
+        // Down limit
+        else if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), motor.getDownlimitoffset(), motor.getDownlimitoffsetsub())) {
             return Color.GREEN;
-        //faulted
-        } else if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), 0, 3)) {
+        }
+        // Faulted
+        else if (commandManager.readBooleanFromDataBlock(motor.getDatablock(), motor.getFaultoffset(), motor.getFaultoffsetsub())) {
             return Color.RED;
-            //otherwise gray
+        }
+        // Otherwise gray
+        else if (commandManager.isConnected()) {
+            return Color.LIGHT_GRAY;
         } else {
             return Color.LIGHT_GRAY;
         }
