@@ -27,13 +27,6 @@ public class Main {
             int result = plcConnector.connect();
             if (result == 0) {
                 System.out.println("Connected to PLC at " + config.getAddress());
-                try {
-                    String data = commandManager.readStringFromDataBlock(1, 256, 0, 2, 10);
-                    System.out.println("Read data: " + data);
-                } catch (IOException e) {
-                    System.err.println("Error reading data: " + e.getMessage());
-                }
-
             } else {
                 System.out.println("Failed to connect to PLC at " + config.getAddress() + ": " + plcConnector.getErrorText(result));
             }
